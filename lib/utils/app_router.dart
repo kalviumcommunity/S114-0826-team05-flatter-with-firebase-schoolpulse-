@@ -83,7 +83,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: ':schoolId',
                     name: 'school-detail',
-                    builder: (context, state) => SchoolDetailView(
+                    builder: (context, state) => SchoolDashboardView(
                       schoolId: state.pathParameters['schoolId']!,
                     ),
                     routes: [

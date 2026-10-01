@@ -10,16 +10,16 @@ import '../../utils/app_formatters.dart'
 import '../../utils/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 
-class SchoolDetailView extends ConsumerStatefulWidget {
+class SchoolDashboardView extends ConsumerStatefulWidget {
   final String schoolId;
 
-  const SchoolDetailView({super.key, required this.schoolId});
+  const SchoolDashboardView({super.key, required this.schoolId});
 
   @override
-  ConsumerState<SchoolDetailView> createState() => _SchoolDetailViewState();
+  ConsumerState<SchoolDashboardView> createState() => _SchoolDashboardViewState();
 }
 
-class _SchoolDetailViewState extends ConsumerState<SchoolDetailView> {
+class _SchoolDashboardViewState extends ConsumerState<SchoolDashboardView> {
   int _selectedTab = 0;
 
   @override
