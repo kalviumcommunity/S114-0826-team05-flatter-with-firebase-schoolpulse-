@@ -1,0 +1,315 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserRole() {
+      return getUserData().role;
+    }
+
+    function getUserDistrictId() {
+      return getUserData().districtId;
+    }
+
+    function getUserSchoolId() {
+      return getUserData().schoolId;
+    }
+
+    function hasPermission(permission) {
+      return permission in getUserData().permissions;
+    }
+
+    function isSuperAdmin() {
+      return getUserRole() == 'super_admin';
+    }
+
+    function isDistrictAdmin() {
+      return getUserRole() == 'district_admin';
+    }
+
+    function isSchoolAdmin() {
+      return getUserRole() == 'school_admin';
+    }
+
+    function isTeacher() {
+      return getUserRole() == 'teacher';
+    }
+
+    function isViewer() {
+      return getUserRole() == 'viewer';
+    }
+
+    function isDistrictMember(districtId) {
+      return getUserDistrictId() == districtId;
+    }
+
+    function isSchoolMember(schoolId) {
+      return getUserSchoolId() == schoolId;
+    }
+
+    function canManageDistrict(districtId) {
+      return isAuthenticated() && (isSuperAdmin() || (isDistrictAdmin() && isDistrictMember(districtId)));
+    }
+
+    function canManageSchool(schoolId, districtId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(schoolId))
+      );
+    }
+
+    function canViewSchool(schoolId, districtId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(schoolId)) ||
+        (isTeacher() && isSchoolMember(schoolId)) ||
+        (isViewer() && isDistrictMember(districtId))
+      );
+    }
+
+    function canManageStudent(studentId, schoolId, districtId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(schoolId)) ||
+        (isTeacher() && isSchoolMember(schoolId))
+      );
+    }
+
+    function canViewStudent(studentId, schoolId, districtId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(schoolId)) ||
+        (isTeacher() && isSchoolMember(schoolId)) ||
+        (isViewer() && isDistrictMember(districtId))
+      );
+    }
+
+    function canManageAttendance(schoolId, districtId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(schoolId)) ||
+        (isTeacher() && isSchoolMember(schoolId))
+      );
+    }
+
+    function canViewAttendance(schoolId, districtId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(schoolId)) ||
+        (isTeacher() && isSchoolMember(schoolId)) ||
+        (isViewer() && isDistrictMember(districtId))
+      );
+    }
+
+    function canManageFees(schoolId, districtId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(schoolId))
+      );
+    }
+
+    function canViewFees(schoolId, districtId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(schoolId)) ||
+        (isTeacher() && isSchoolMember(schoolId)) ||
+        (isViewer() && isDistrictMember(districtId))
+      );
+    }
+
+    function canManageExams(schoolId, districtId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(schoolId)) ||
+        (isTeacher() && isSchoolMember(schoolId))
+      );
+    }
+
+    function canViewExams(schoolId, districtId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(schoolId)) ||
+        (isTeacher() && isSchoolMember(schoolId)) ||
+        (isViewer() && isDistrictMember(districtId))
+      );
+    }
+
+    function canManageRiskAlerts(districtId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(districtId)) ||
+        (isSchoolAdmin() && exists(get(/databases/$(database)/documents/schools/$(getUserSchoolId())).data.districtId == districtId))
+      );
+    }
+
+    function canViewRiskAlerts(districtId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(districtId)) ||
+        (isSchoolAdmin() && exists(get(/databases/$(database)/documents/schools/$(getUserSchoolId())).data.districtId == districtId)) ||
+        (isViewer() && isDistrictMember(districtId))
+      );
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || // Users can read their own profile
+        isSuperAdmin() || // Super admins can read all
+        (isDistrictAdmin() && get(/databases/$(database)/documents/users/$(userId)).data.districtId == getUserDistrictId()) || // District admins can read users in their district
+        (isSchoolAdmin() && get(/databases/$(database)/documents/users/$(userId)).data.schoolId == getUserSchoolId()) // School admins can read users in their school
+      );
+
+      allow create: if isAuthenticated() && isSuperAdmin(); // Only super admins can create users
+
+      allow update: if isAuthenticated() && (
+        request.auth.uid == userId || // Users can update their own profile
+        isSuperAdmin() || // Super admins can update any user
+        (isDistrictAdmin() && get(/databases/$(database)/documents/users/$(userId)).data.districtId == getUserDistrictId() && 
+          // District admins can only update non-sensitive fields
+          !request.resource.data.keys().hasAny(['role', 'permissions', 'districtId', 'schoolId'])) ||
+        (isSchoolAdmin() && get(/databases/$(database)/documents/users/$(userId)).data.schoolId == getUserSchoolId() &&
+          // School admins can only update non-sensitive fields
+          !request.resource.data.keys().hasAny(['role', 'permissions', 'districtId', 'schoolId']))
+      );
+
+      allow delete: if isAuthenticated() && isSuperAdmin(); // Only super admins can delete users
+    }
+
+    // Districts Collection
+    match /districts/{districtId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || // Super admins can read all districts
+        isDistrictMember(districtId) // Users can read their own district
+      );
+
+      allow create: if isAuthenticated() && isSuperAdmin(); // Only super admins can create districts
+
+      allow update: if canManageDistrict(districtId);
+
+      allow delete: if isAuthenticated() && isSuperAdmin(); // Only super admins can delete districts
+    }
+
+    // Schools Collection
+    match /schools/{schoolId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canViewSchool(schoolId, resource.data.districtId)
+      );
+
+      allow create: if isAuthenticated() && canManageSchool(schoolId, resource.data.districtId);
+
+      allow update: if isAuthenticated() && canManageSchool(schoolId, resource.data.districtId) && (
+        // District/School admins cannot change districtId
+        !request.resource.data.keys().hasAny(['districtId']) ||
+        request.resource.data.districtId == resource.data.districtId
+      );
+
+      allow delete: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(resource.data.districtId))
+      );
+    }
+
+    // Students Collection
+    match /students/{studentId} {
+      allow read: if isAuthenticated() && canViewStudent(studentId, resource.data.schoolId, resource.data.districtId);
+
+      allow create: if isAuthenticated() && canManageStudent(studentId, request.resource.data.schoolId, request.resource.data.districtId);
+
+      allow update: if isAuthenticated() && canManageStudent(studentId, resource.data.schoolId, resource.data.districtId) && (
+        // Cannot change districtId or schoolId
+        !request.resource.data.keys().hasAny(['districtId', 'schoolId']) ||
+        (request.resource.data.districtId == resource.data.districtId && request.resource.data.schoolId == resource.data.schoolId)
+      );
+
+      allow delete: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(resource.data.districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(resource.data.schoolId))
+      );
+    }
+
+    // Attendance Collection
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated() && canViewAttendance(resource.data.schoolId, resource.data.districtId);
+
+      allow create: if isAuthenticated() && canManageAttendance(request.resource.data.schoolId, request.resource.data.districtId);
+
+      allow update: if isAuthenticated() && canManageAttendance(resource.data.schoolId, resource.data.districtId);
+
+      allow delete: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(resource.data.districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(resource.data.schoolId))
+      );
+    }
+
+    // Fees Collection
+    match /fees/{feeId} {
+      allow read: if isAuthenticated() && canViewFees(resource.data.schoolId, resource.data.districtId);
+
+      allow create: if isAuthenticated() && canManageFees(request.resource.data.schoolId, request.resource.data.districtId);
+
+      allow update: if isAuthenticated() && canManageFees(resource.data.schoolId, resource.data.districtId);
+
+      allow delete: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(resource.data.districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(resource.data.schoolId))
+      );
+    }
+
+    // Exams Collection
+    match /exams/{examId} {
+      allow read: if isAuthenticated() && canViewExams(resource.data.schoolId, resource.data.districtId);
+
+      allow create: if isAuthenticated() && canManageExams(request.resource.data.schoolId, request.resource.data.districtId);
+
+      allow update: if isAuthenticated() && canManageExams(resource.data.schoolId, resource.data.districtId);
+
+      allow delete: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && isDistrictMember(resource.data.districtId)) ||
+        (isSchoolAdmin() && isSchoolMember(resource.data.schoolId))
+      );
+    }
+
+    // Risk Alerts Collection
+    match /risk_alerts/{alertId} {
+      allow read: if isAuthenticated() && canViewRiskAlerts(resource.data.districtId);
+
+      allow create: if isAuthenticated() && canManageRiskAlerts(request.resource.data.districtId);
+
+      allow update: if isAuthenticated() && (
+        // Allow resolving alerts
+        (request.resource.data.isResolved == true && resource.data.isResolved == false) ||
+        canManageRiskAlerts(resource.data.districtId)
+      );
+
+      allow delete: if isAuthenticated() && isSuperAdmin();
+    }
+
+    // Default deny for any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

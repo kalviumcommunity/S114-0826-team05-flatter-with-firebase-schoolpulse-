@@ -1,0 +1,64 @@
+name: schoolpulse
+
+description: "District School Intelligence & Early Warning System"
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  firebase_core: ^4.15.0
+  firebase_auth: ^6.7.0
+  cloud_firestore: ^6.10.0
+  flutter_riverpod: ^3.4.3
+  fl_chart: ^1.2.0
+  intl: ^0.20.3
+  go_router: ^18.0.1
+  uuid: ^4.4.0
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.12.0
+  collection: ^1.18.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  build_runner: ^2.5.4
+  freezed: ^4.0.2
+  json_serializable: ^6.9.5
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+
+  web:
+    generate: true
+    image_path: "web/icons/Icon-512.svg"
+    background_color: "#2563EB"
+    theme_color: "#2563EB"
+
+  windows:
+    generate: true
+    image_path: "web/icons/Icon-512.svg"
+
+  macos:
+    generate: true
+    image_path: "web/icons/Icon-512.svg"
+
+  linux:
+    generate: trueflutter clean
+    image_path: "web/icons/Icon-512.svg"

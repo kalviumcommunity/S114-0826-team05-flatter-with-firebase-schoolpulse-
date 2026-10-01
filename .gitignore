@@ -1,0 +1,52 @@
+# Flutter/Dart/Pub
+.dart_tool/
+.packages
+build/
+flutter_*.png
+*.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Firebase
+firebase_options.dart
+*.firebase.json
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+.lcov
+
+# Build outputs
+*.apk
+*.aab
+*.ipa
+*.app
+*.exe
+*.dmg
+*.deb
+*.rpm
+*.snap
+*.flatpak
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.gr.dart
+
+# Build runner
+build.yaml
