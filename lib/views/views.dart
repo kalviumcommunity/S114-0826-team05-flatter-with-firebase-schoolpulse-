@@ -1,0 +1,9 @@
+export 'auth/auth_views.dart';
+export 'dashboard/dashboard_views.dart';
+export 'schools/schools_views.dart';
+export 'students/students_views.dart';
+export 'attendance/attendance_view.dart';
+export 'fees/fees_view.dart';
+export 'exams/exams_view.dart';
+export 'risk/risk_alerts_view.dart';
+export 'settings/settings_view.dart';

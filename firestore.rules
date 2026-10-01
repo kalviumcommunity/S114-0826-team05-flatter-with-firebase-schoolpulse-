@@ -1,0 +1,201 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userRole() {
+      return getUserData().role;
+    }
+
+    function userDistrictId() {
+      return getUserData().districtId;
+    }
+
+    function userSchoolId() {
+      return getUserData().schoolId;
+    }
+
+    function userPermissions() {
+      return getUserData().permissions;
+    }
+
+    function hasPermission(permission) {
+      return permission in userPermissions();
+    }
+
+    function hasAnyPermission(permissions) {
+      return permissions.hasAny(userPermissions());
+    }
+
+    function isSuperAdmin() {
+      return userRole() == 'superAdmin';
+    }
+
+    function isDistrictAdmin() {
+      return userRole() == 'districtAdmin';
+    }
+
+    function isSchoolAdmin() {
+      return userRole() == 'schoolAdmin';
+    }
+
+    function isTeacher() {
+      return userRole() == 'teacher';
+    }
+
+    function isViewer() {
+      return userRole() == 'viewer';
+    }
+
+    function isAdmin() {
+      return isSuperAdmin() || isDistrictAdmin() || isSchoolAdmin();
+    }
+
+    function canAccessDistrict(districtId) {
+      return isSuperAdmin() || (isDistrictAdmin() && userDistrictId() == districtId);
+    }
+
+    function canAccessSchool(schoolId) {
+      return isSuperAdmin() ||
+             (isDistrictAdmin() && exists(/databases/$(database)/documents/schools/$(schoolId)) && get(/databases/$(database)/documents/schools/$(schoolId)).data.districtId == userDistrictId()) ||
+             (isSchoolAdmin() && userSchoolId() == schoolId);
+    }
+
+    function canAccessStudent(studentId) {
+      return isSuperAdmin() ||
+             (isDistrictAdmin() && exists(/databases/$(database)/documents/students/$(studentId)) && get(/databases/$(database)/documents/students/$(studentId)).data.districtId == userDistrictId()) ||
+             (isSchoolAdmin() && exists(/databases/$(database)/documents/students/$(studentId)) && get(/databases/$(database)/documents/students/$(studentId)).data.schoolId == userSchoolId()) ||
+             (isTeacher() && exists(/databases/$(database)/documents/students/$(studentId)) && get(/databases/$(database)/documents/students/$(studentId)).data.schoolId == userSchoolId());
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if isSignedIn() && (request.auth.uid == userId || isSuperAdmin());
+      allow create: if isSignedIn() && isSuperAdmin();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    // Districts collection
+    match /districts/{districtId} {
+      allow read: if isSignedIn() && canAccessDistrict(districtId);
+      allow write: if isSignedIn() && (isSuperAdmin() || (isDistrictAdmin() && userDistrictId() == districtId));
+      allow create: if isSignedIn() && isSuperAdmin();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    // Schools collection
+    match /schools/{schoolId} {
+      allow read: if isSignedIn() && canAccessSchool(schoolId);
+      allow write: if isSignedIn() && (isSuperAdmin() || (isDistrictAdmin() && canAccessSchool(schoolId)) || (isSchoolAdmin() && userSchoolId() == schoolId));
+      allow create: if isSignedIn() && (isSuperAdmin() || (isDistrictAdmin() && canAccessSchool(schoolId)));
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    // Students collection
+    match /students/{studentId} {
+      allow read: if isSignedIn() && canAccessStudent(studentId);
+      allow write: if isSignedIn() && (isSuperAdmin() || (isDistrictAdmin() && canAccessStudent(studentId)) || (isSchoolAdmin() && canAccessStudent(studentId)) || (isTeacher() && canAccessStudent(studentId)));
+      allow create: if isSignedIn() && (isSuperAdmin() || (isDistrictAdmin() && canAccessStudent(studentId)) || (isSchoolAdmin() && canAccessStudent(studentId)));
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    // Attendance collection
+    match /attendance/{attendanceId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && resource.data.districtId == userDistrictId()) ||
+        (isSchoolAdmin() && resource.data.schoolId == userSchoolId()) ||
+        (isTeacher() && resource.data.schoolId == userSchoolId())
+      );
+      allow write: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && request.resource.data.districtId == userDistrictId()) ||
+        (isSchoolAdmin() && request.resource.data.schoolId == userSchoolId()) ||
+        (isTeacher() && request.resource.data.schoolId == userSchoolId())
+      );
+      allow create: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && request.resource.data.districtId == userDistrictId()) ||
+        (isSchoolAdmin() && request.resource.data.schoolId == userSchoolId()) ||
+        (isTeacher() && request.resource.data.schoolId == userSchoolId())
+      );
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    // Fees collection
+    match /fees/{feeId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && resource.data.districtId == userDistrictId()) ||
+        (isSchoolAdmin() && resource.data.schoolId == userSchoolId()) ||
+        (isTeacher() && resource.data.schoolId == userSchoolId()) ||
+        (request.auth.uid == resource.data.studentId)
+      );
+      allow write: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && request.resource.data.districtId == userDistrictId()) ||
+        (isSchoolAdmin() && request.resource.data.schoolId == userSchoolId())
+      );
+      allow create: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && request.resource.data.districtId == userDistrictId()) ||
+        (isSchoolAdmin() && request.resource.data.schoolId == userSchoolId())
+      );
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    // Exams collection
+    match /exams/{examId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && resource.data.districtId == userDistrictId()) ||
+        (isSchoolAdmin() && resource.data.schoolId == userSchoolId()) ||
+        (isTeacher() && resource.data.schoolId == userSchoolId()) ||
+        (request.auth.uid == resource.data.studentId)
+      );
+      allow write: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && request.resource.data.districtId == userDistrictId()) ||
+        (isSchoolAdmin() && request.resource.data.schoolId == userSchoolId()) ||
+        (isTeacher() && request.resource.data.schoolId == userSchoolId())
+      );
+      allow create: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && request.resource.data.districtId == userDistrictId()) ||
+        (isSchoolAdmin() && request.resource.data.schoolId == userSchoolId()) ||
+        (isTeacher() && request.resource.data.schoolId == userSchoolId())
+      );
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    // Risk Alerts collection
+    match /risk_alerts/{alertId} {
+      allow read: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && resource.data.districtId == userDistrictId()) ||
+        (isSchoolAdmin() && resource.data.schoolId == userSchoolId()) ||
+        (isTeacher() && resource.data.schoolId == userSchoolId())
+      );
+      allow write: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && request.resource.data.districtId == userDistrictId()) ||
+        (isSchoolAdmin() && request.resource.data.schoolId == userSchoolId()) ||
+        (isTeacher() && request.resource.data.schoolId == userSchoolId())
+      );
+      allow create: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isDistrictAdmin() && request.resource.data.districtId == userDistrictId()) ||
+        (isSchoolAdmin() && request.resource.data.schoolId == userSchoolId())
+      );
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+  }
+}

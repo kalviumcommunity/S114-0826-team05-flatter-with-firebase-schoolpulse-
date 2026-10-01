@@ -1,0 +1,179 @@
+indexes:
+  # Students collection indexes
+  - collectionGroup: students
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: schoolId
+        order: ASCENDING
+      - fieldPath: status
+        order: ASCENDING
+      - fieldPath: lastName
+        order: ASCENDING
+      - fieldPath: firstName
+        order: ASCENDING
+
+  - collectionGroup: students
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: districtId
+        order: ASCENDING
+      - fieldPath: status
+        order: ASCENDING
+      - fieldPath: schoolId
+        order: ASCENDING
+      - fieldPath: lastName
+        order: ASCENDING
+
+  - collectionGroup: students
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: schoolId
+        order: ASCENDING
+      - fieldPath: riskLevel
+        order: ASCENDING
+
+  # Attendance collection indexes
+  - collectionGroup: attendance
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: schoolId
+        order: ASCENDING
+      - fieldPath: date
+        order: ASCENDING
+
+  - collectionGroup: attendance
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: studentId
+        order: ASCENDING
+      - fieldPath: date
+        order: ASCENDING
+
+  - collectionGroup: attendance
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: schoolId
+        order: ASCENDING
+      - fieldPath: date
+        order: ASCENDING
+      - fieldPath: status
+        order: ASCENDING
+
+  # Fees collection indexes
+  - collectionGroup: fees
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: schoolId
+        order: ASCENDING
+      - fieldPath: dueDate
+        order: ASCENDING
+
+  - collectionGroup: fees
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: studentId
+        order: ASCENDING
+      - fieldPath: dueDate
+        order: ASCENDING
+
+  - collectionGroup: fees
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: schoolId
+        order: ASCENDING
+      - fieldPath: status
+        order: ASCENDING
+      - fieldPath: dueDate
+        order: ASCENDING
+
+  # Exams collection indexes
+  - collectionGroup: exams
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: schoolId
+        order: ASCENDING
+      - fieldPath: examDate
+        order: ASCENDING
+
+  - collectionGroup: exams
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: studentId
+        order: ASCENDING
+      - fieldPath: examDate
+        order: ASCENDING
+
+  - collectionGroup: exams
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: schoolId
+        order: ASCENDING
+      - fieldPath: status
+        order: ASCENDING
+      - fieldPath: examDate
+        order: ASCENDING
+
+  # Risk Alerts collection indexes
+  - collectionGroup: risk_alerts
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: districtId
+        order: ASCENDING
+      - fieldPath: isResolved
+        order: ASCENDING
+      - fieldPath: level
+        order: DESCENDING
+      - fieldPath: triggeredAt
+        order: DESCENDING
+
+  - collectionGroup: risk_alerts
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: schoolId
+        order: ASCENDING
+      - fieldPath: isResolved
+        order: ASCENDING
+      - fieldPath: level
+        order: DESCENDING
+      - fieldPath: triggeredAt
+        order: DESCENDING
+
+  # Districts collection indexes
+  - collectionGroup: districts
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: isActive
+        order: ASCENDING
+      - fieldPath: name
+        order: ASCENDING
+
+  # Schools collection indexes
+  - collectionGroup: schools
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: districtId
+        order: ASCENDING
+      - fieldPath: isActive
+        order: ASCENDING
+      - fieldPath: name
+        order: ASCENDING
+
+  # Users collection indexes
+  - collectionGroup: users
+    queryScope: COLLECTION
+    fields:
+      - fieldPath: districtId
+        order: ASCENDING
+      - fieldPath: role
+        order: ASCENDING
+
+fieldOverrides:
+  - collectionGroup: students
+    fieldPath: feeBalance
+    indexes: []
+  - collectionGroup: students
+    fieldPath: examAverage
+    indexes: []
+  - collectionGroup: students
+    fieldPath: attendanceScore
+    indexes: []

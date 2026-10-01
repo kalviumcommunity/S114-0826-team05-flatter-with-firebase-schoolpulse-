@@ -1,0 +1,16 @@
+{
+  "projects": {
+    "default": "schoolpulse-project-id",
+    "staging": "schoolpulse-staging",
+    "production": "schoolpulse-production"
+  },
+  "targets": {
+    "schoolpulse-production": {
+      "hosting": {
+        "web": [
+          "schoolpulse-web"
+        ]
+      }
+    }
+  }
+}
