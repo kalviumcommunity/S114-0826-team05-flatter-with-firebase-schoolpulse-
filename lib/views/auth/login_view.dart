@@ -30,6 +30,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -44,6 +45,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
         context.go('/dashboard');
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
       });

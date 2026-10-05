@@ -5,7 +5,6 @@ import '../../utils/app_theme.dart';
 import '../../utils/app_formatters.dart';
 import '../../providers/app_providers.dart';
 import '../../models/models.dart';
-import '../../services/firestore_service.dart' show QueryFilter, OrderByClause;
 
 class RegisterView extends ConsumerStatefulWidget {
   const RegisterView({super.key});
@@ -25,10 +24,6 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
   bool _obscureConfirmPassword = true;
   String? _errorMessage;
   UserRole _selectedRole = UserRole.teacher;
-  String? _selectedDistrictId;
-  String? _selectedSchoolId;
-  List<DistrictModel> _districts = [];
-  List<SchoolModel> _schools = [];
 
   @override
   void dispose() {
@@ -39,55 +34,10 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
     super.dispose();
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadDistricts();
-  }
-
-  Future<void> _loadDistricts() async {
-    try {
-      final districts = await ref.read(firestoreServiceProvider).queryDocuments(
-        collection: 'districts',
-        filters: [QueryFilter('isActive', true)],
-        orderBy: [OrderByClause('name', false)],
-        fromFirestore: (doc) => DistrictModel.fromFirestore(doc),
-      );
-      if (mounted) {
-        setState(() => _districts = districts);
-      }
-    } catch (e) {
-      // Ignore error
-    }
-  }
-
-  Future<void> _loadSchools(String districtId) async {
-    try {
-      final schools = await ref.read(firestoreServiceProvider).getSchoolsByDistrict(districtId);
-      if (mounted) {
-        setState(() {
-          _schools = schools;
-          _selectedSchoolId = null;
-        });
-      }
-    } catch (e) {
-      // Ignore error
-    }
-  }
-
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedDistrictId == null) {
-      setState(() => _errorMessage = 'Please select a district');
-      return;
-    }
-
-    if (_selectedRole == UserRole.schoolAdmin && _selectedSchoolId == null) {
-      setState(() => _errorMessage = 'Please select a school for School Admin role');
-      return;
-    }
-
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -99,13 +49,12 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
         password: _passwordController.text,
         displayName: _displayNameController.text.trim(),
         role: _selectedRole,
-        districtId: _selectedDistrictId!,
-        schoolId: _selectedRole == UserRole.schoolAdmin ? _selectedSchoolId : null,
       );
       if (mounted) {
         context.go('/dashboard');
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
       });
@@ -305,56 +254,6 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
                             onChanged: (value) => setState(() => _selectedRole = value!),
                           ),
                           const SizedBox(height: 16),
-
-                          // District Selection
-                          DropdownButtonFormField<String>(
-                            value: _selectedDistrictId,
-                            decoration: const InputDecoration(
-                              labelText: 'District',
-                              prefixIcon: Icon(Icons.location_city_outlined),
-                            ),
-                            items: _districts
-                                .map((district) => DropdownMenuItem(
-                                      value: district.id,
-                                      child: Text(district.name),
-                                    ))
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedDistrictId = value;
-                                _selectedSchoolId = null;
-                              });
-                              if (value != null) _loadSchools(value);
-                            },
-                            validator: (value) {
-                              if (value == null || value.isEmpty) return 'Please select a district';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-
-                          // School Selection (for School Admin)
-                          if (_selectedRole == UserRole.schoolAdmin) ...[
-                            DropdownButtonFormField<String>(
-                              value: _selectedSchoolId,
-                              decoration: const InputDecoration(
-                                labelText: 'School',
-                                prefixIcon: Icon(Icons.school_outlined),
-                              ),
-                              items: _schools
-                                  .map((school) => DropdownMenuItem(
-                                        value: school.id,
-                                        child: Text(school.name),
-                                      ))
-                                  .toList(),
-                              onChanged: (value) => setState(() => _selectedSchoolId = value),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) return 'Please select a school';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                          ],
 
                           // Register Button
                           FilledButton(
