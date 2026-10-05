@@ -85,7 +85,8 @@ service cloud.firestore {
 
     // Districts collection
     match /districts/{districtId} {
-      allow read: if isSignedIn() && canAccessDistrict(districtId);
+      // Allow public read for registration (users need to select district during registration)
+      allow read: if true;
       allow write: if isSignedIn() && (isSuperAdmin() || (isDistrictAdmin() && userDistrictId() == districtId));
       allow create: if isSignedIn() && isSuperAdmin();
       allow delete: if isSignedIn() && isSuperAdmin();

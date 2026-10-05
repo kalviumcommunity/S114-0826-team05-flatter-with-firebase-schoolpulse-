@@ -1,11 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/user_model.dart';
+import 'package:uuid/uuid.dart';
+import '../models/models.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final Uuid _uuid = const Uuid();
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
@@ -29,7 +31,7 @@ class AuthService {
     required String password,
     required String displayName,
     required UserRole role,
-    required String districtId,
+    String? districtId,
     String? schoolId,
   }) async {
     try {
@@ -40,13 +42,17 @@ class AuthService {
 
       await credential.user!.updateDisplayName(displayName);
 
+      // Get or create default district and school
+      final district = await _getOrCreateDefaultDistrict(districtId);
+      final school = await _getOrCreateDefaultSchool(schoolId, district.id);
+
       final userModel = UserModel(
         uid: credential.user!.uid,
         email: email,
         displayName: displayName,
         role: role,
-        districtId: districtId,
-        schoolId: schoolId,
+        districtId: district.id,
+        schoolId: school?.id,
         isActive: true,
         permissions: role.defaultPermissions,
         createdAt: DateTime.now(),
@@ -58,6 +64,90 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     }
+  }
+
+  Future<DistrictModel> _getOrCreateDefaultDistrict(String? preferredDistrictId) async {
+    if (preferredDistrictId != null) {
+      final doc = await _firestore.collection('districts').doc(preferredDistrictId).get();
+      if (doc.exists) {
+        return DistrictModel.fromFirestore(doc);
+      }
+    }
+
+    // Check for existing default district
+    final query = await _firestore
+        .collection('districts')
+        .where('isActive', isEqualTo: true)
+        .limit(1)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      return DistrictModel.fromFirestore(query.docs.first);
+    }
+
+    // Create default district
+    const districtId = 'default-district';
+    final district = DistrictModel(
+      id: districtId,
+      name: 'Default District',
+      code: 'DEF',
+      address: '123 Education St',
+      phone: '+1-555-0000',
+      email: 'admin@defaultdistrict.edu',
+      superintendentName: 'Superintendent',
+      isActive: true,
+      settings: {},
+      createdAt: DateTime.now(),
+    );
+
+    await _firestore.collection('districts').doc(districtId).set(district.toJson());
+    return district;
+  }
+
+  Future<SchoolModel?> _getOrCreateDefaultSchool(String? preferredSchoolId, String districtId) async {
+    if (preferredSchoolId != null) {
+      final doc = await _firestore.collection('schools').doc(preferredSchoolId).get();
+      if (doc.exists) {
+        return SchoolModel.fromFirestore(doc);
+      }
+    }
+
+    // Check for existing school in district
+    final query = await _firestore
+        .collection('schools')
+        .where('districtId', isEqualTo: districtId)
+        .where('isActive', isEqualTo: true)
+        .limit(1)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      return SchoolModel.fromFirestore(query.docs.first);
+    }
+
+    // Create default school
+    const schoolId = 'default-school';
+    final school = SchoolModel(
+      id: schoolId,
+      districtId: districtId,
+      name: 'Default School',
+      code: 'DEF',
+      type: SchoolType.k12,
+      address: '123 School St',
+      phone: '+1-555-0100',
+      email: 'admin@defaultschool.edu',
+      principalName: 'Principal',
+      principalPhone: '+1-555-0101',
+      principalEmail: 'principal@defaultschool.edu',
+      totalCapacity: 500,
+      currentEnrollment: 0,
+      gradeLevels: ['K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'],
+      isActive: true,
+      settings: {},
+      createdAt: DateTime.now(),
+    );
+
+    await _firestore.collection('schools').doc(schoolId).set(school.toJson());
+    return school;
   }
 
   Future<void> signOut() async {
